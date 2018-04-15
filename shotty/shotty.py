@@ -26,7 +26,9 @@ def snapshots():
     """commands for snapshots"""
 
 @snapshots.command('list')
-@click.option('--project', default=None, help="Only snapshot for project(tag project:<name>)")    
+@click.option('--project', default=None, help="Only snapshot for project(tag project:<name>)")
+@click.option('--all', 'list_all', default=False, is_flag=True,
+	help="List all snapshots for each volume, not just the recent ones")    
 def list_snashots(project):
     """List EC2 Snapshots"""
     instances = filter_instances(project)
@@ -41,6 +43,7 @@ def list_snashots(project):
                 s.progress,
                 s.start_time.strftime("%c")
                 )))
+                if s.state=='completed' and not list_all: break
 
     return                
 
@@ -99,18 +102,27 @@ def stop_instances(project):
 
     for i in instances:
         print("Stopping {0}...".format(i.id))
-        i.stop() 
+        try:
+            i.stop()
 
+        except botocore.exceptions.ClientError as e:
+            print ('Could not stop {0}. '.format(i.id) + str(e))
+            continue     
+    return
+    
 @instances.command('start')
 @click.option('--project', default=None, help="Only instances for project(tag project:<name>)")
-def stop_instances(project):
-    "Stop EC2 instances"
+def start_instances(project):
+    """Start EC2 instances"""
 
     instances = filter_instances(project)
 
     for i in instances:
         print("Starting instance {0}...".format(i.id))
-        i.start()         
+        try:
+            i.start()
+        except botocore.exceptions.ClientError as e:
+            print ('Could not start {0}. '.format(i.id) + str(e))            
    
 @instances.command('snapshot')
 @click.option('--project', default=None, help="Only instances for project(tag project:<name>)")
